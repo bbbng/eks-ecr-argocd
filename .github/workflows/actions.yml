@@ -1,0 +1,108 @@
+# This workflow will build a package using Maven and then publish it to GitHub packages when a release is created
+# For more information see: https://github.com/actions/setup-java/blob/main/docs/advanced-usage.md#apache-maven-with-a-settings-path
+
+name: Maven Package
+
+on:
+  push:
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - 'actions.yml'
+      - 'Dockerfile'
+      - 'manifest/**'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-northeast-2
+
+    - name: Login to Amazon ECR Private
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+      with:
+        registry-type: private
+
+    - uses: actions/checkout@v4
+
+    - run: mkdir ./src/main/resources
+    - run: touch ./src/main/resources/application.properties
+    - run: echo "${{ secrets.APPLICATION }}" >> ./src/main/resources/application.properties
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Build with Maven
+      run: mvn -B package -DskipTests --file pom.xml
+
+    # - name: Login to docker hub
+      # uses: docker/login-action@v3
+      # with:
+      #   username: ${{ secrets.DOCKERHUB_USER }}
+      #   password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    # - name: Setup docker buildx
+    #   uses: docker/setup-buildx-action@v3
+
+    - name: Build and push docker image
+      env:
+        REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        REPOSITORY: nginx-test
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 724772050614.dkr.ecr.ap-northeast-2.amazonaws.com
+        docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+        docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+    # - name: Docker Build and push
+    #   uses: docker/build-push-action@v6
+    #   with:
+    #     context: .
+    #     push: true
+    #     tags: ${{ secrets.DOCKERHUB_USER }}/app-with-actions:${{ github.sha }}
+
+    outputs:
+      REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+
+  ArgoCD:
+
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+
+    - name: github checkout
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ secrets.GH_USER }}/app-with-argocd-manifest
+        ref: main
+        token: ${{ secrets.GTOKEN }} # git commit, push에 사용할 token. pull에는 필요 없음
+
+    - name: Update deployment.yaml # update deployment yaml file to nginx:latest
+      env:
+        REGISTRY: ${{ needs.build.outputs.REGISTRY }}
+      run: |
+        sed -i "s%image: $REGISTRY/nginx-test:[A-z0-9]*%image: $REGISTRY/nginx-test:${{ github.sha }}%" ./manifest/argocd-deployment.yaml
+
+    - name: Commit and push changes # 수정한 deployment.yaml을 git에 commit, push
+      run: |
+        git config --local user.email heoseonho@gmail.com
+        git config --local user.name bbbng
+        git add .
+        git commit -m "Update app image to latest"
+        git push
