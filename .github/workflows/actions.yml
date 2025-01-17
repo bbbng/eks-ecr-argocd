@@ -51,15 +51,6 @@ jobs:
     - name: Build with Maven
       run: mvn -B package -DskipTests --file pom.xml
 
-    # - name: Login to docker hub
-      # uses: docker/login-action@v3
-      # with:
-      #   username: ${{ secrets.DOCKERHUB_USER }}
-      #   password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    # - name: Setup docker buildx
-    #   uses: docker/setup-buildx-action@v3
-
     - name: Build and push docker image
       env:
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -69,13 +60,6 @@ jobs:
         aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 724772050614.dkr.ecr.ap-northeast-2.amazonaws.com
         docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
         docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-
-    # - name: Docker Build and push
-    #   uses: docker/build-push-action@v6
-    #   with:
-    #     context: .
-    #     push: true
-    #     tags: ${{ secrets.DOCKERHUB_USER }}/app-with-actions:${{ github.sha }}
 
     outputs:
       REGISTRY: ${{ steps.login-ecr.outputs.registry }}
