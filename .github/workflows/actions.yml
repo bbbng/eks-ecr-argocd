@@ -81,7 +81,7 @@ jobs:
       env:
         REGISTRY: ${{ needs.build.outputs.REGISTRY }}
       run: |
-        sed -i "s%image: [A-z0-9]*/app-with-actions:[A-z0-9]*%image: $REGISTRY/app-with-actions:${{ github.sha }}%" ./manifest/argocd-deployment.yaml
+        sed -i "s%image: [A-z\.\-0-9]*/app-with-actions:[A-z0-9]*%image: $REGISTRY/app-with-actions:${{ github.sha }}%" ./manifest/argocd-deployment.yaml
 
     - name: Commit and push changes # 수정한 deployment.yaml을 git에 commit, push
       run: |
