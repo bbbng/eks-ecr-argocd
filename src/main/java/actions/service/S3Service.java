@@ -34,6 +34,9 @@ public class S3Service {
 	@Value("${cloud.aws.s3.bucket}")
 	private String bucketName;
 	
+	@Value("${cloud.aws.s3.filepath}")
+	private String filePathPrefix;
+	
 	private final String DIR_NAME = "s3_data";
 	
 	
@@ -48,7 +51,7 @@ public class S3Service {
 			
 			// 파일 정보 수집
 			// String filePath = "//home//ubuntu//" + DIR_NAME;
-			String filePath = "C:\\Users\\heose_8\\" + DIR_NAME;
+			String filePath = filePathPrefix + DIR_NAME;
 			String attachmentOriginalFileName = file.getOriginalFilename();
 			UUID uuid = UUID.randomUUID();
 			String attachmentFileName = uuid.toString() + "_" + attachmentOriginalFileName;
