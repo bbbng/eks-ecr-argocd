@@ -11,7 +11,7 @@ on: [workflow_dispatch]
   #     - 'actions.yml'
   #     - 'Dockerfile'
   #     - 'manifest/**'
-  # github.sha 업데이트를 위한 변경 사항
+  # github.sha 업데이트를 위한 변경 사
 
 jobs:
   build:
