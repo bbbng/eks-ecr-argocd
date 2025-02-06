@@ -117,4 +117,8 @@ public class S3Service {
 
 		}
 
+		public void deleteS3file(long fileNo) {
+			amazonS3.deleteObject(bucketName, "/fea57383-1ab7-444f-99c3-8a1522c48099_Squirrel-UpdateSelf.log");
+		}
+
 }
